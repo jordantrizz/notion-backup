@@ -123,7 +123,7 @@ Created in dry-run mode at {timestamp}.
             logger.info("=" * 60)
 
             # Check for resumable session
-            session = load_session()
+            session = load_session(self.settings.notion_space_id)
             if session:
                 if resume is None:
                     if not sys.stdin.isatty():
@@ -144,7 +144,7 @@ Created in dry-run mode at {timestamp}.
                     resume_started_at_ms = session["export_started_at_ms"]
                 else:
                     logger.info("Starting fresh backup session")
-                    clear_session()
+                    clear_session(self.settings.notion_space_id)
 
             # Test connections first
             await self._test_connections(dry_run=dry_run)
@@ -166,7 +166,7 @@ Created in dry-run mode at {timestamp}.
                 )
                 if not backup_file:
                     if resume_task_id is not None:
-                        clear_session()
+                        clear_session(self.settings.notion_space_id)
                     error_message = "Failed to export from Notion"
                     return False
 
@@ -189,7 +189,7 @@ Created in dry-run mode at {timestamp}.
                 await self._handle_cleanup()
 
                 # Clear session on success
-                clear_session()
+                clear_session(self.settings.notion_space_id)
 
                 # Send success notification
                 await self._send_success_notification(

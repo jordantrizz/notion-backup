@@ -51,7 +51,7 @@ repos:
         args:
           - '--strict'
           - "--config=pyproject.toml"
-        additional_dependencies: [ types-PyYAML,types-requests,apprise,tenacity,pydantic,pydantic-settings,types-click ]
+        additional_dependencies: [ types-PyYAML,types-requests,apprise,tenacity,pydantic,pydantic-settings,types-click,pytest,types-mock ]
 
 ci:
     autofix_commit_msg: |

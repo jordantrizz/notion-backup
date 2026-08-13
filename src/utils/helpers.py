@@ -94,42 +94,49 @@ def truncate_string(text: str, max_length: int = 100, suffix: str = "...") -> st
     return text[: max_length - len(suffix)] + suffix
 
 
-SESSION_FILE = Path.home() / ".notion-resume.json"
+def _session_file(space_id: str) -> Path:
+    """Build a per-workspace session file path so concurrent instances don't collide."""
+    return Path.home() / f".notion-backup-session-{space_id}.json"
 
 
-def save_session(task_id: str, started_at_ms: int) -> None:
-    """Save export session state for resumption."""
+def save_session(space_id: str, task_id: str, started_at_ms: int) -> None:
+    """Save export session state for resumption, scoped to a specific workspace."""
     data = {"task_id": task_id, "export_started_at_ms": started_at_ms}
     try:
-        SESSION_FILE.write_text(json.dumps(data, indent=2))
+        _session_file(space_id).write_text(json.dumps(data, indent=2))
     except OSError as e:
         logging.getLogger(__name__).warning("Failed to persist resume session: %s", e)
         return
     logging.getLogger(__name__).info("Session saved for task %s", task_id)
 
 
-def load_session() -> dict[str, Any] | None:
-    """Load saved session state, if any."""
-    if not SESSION_FILE.exists():
+def load_session(space_id: str) -> dict[str, Any] | None:
+    """Load saved session state for a specific workspace, if any."""
+    session_path = _session_file(space_id)
+    if not session_path.exists():
         return None
     try:
-        data = json.loads(SESSION_FILE.read_text())
+        data = json.loads(session_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        # Corrupt or unreadable session file - discard it
+        clear_session(space_id)
+        return None
+    else:
         task_id = data.get("task_id")
         started_at_ms = data.get("export_started_at_ms")
         if task_id and started_at_ms:
             return {"task_id": task_id, "export_started_at_ms": started_at_ms}
-        clear_session()
-        return None
-    except (json.JSONDecodeError, OSError):
-        clear_session()
+        # Incomplete session data - discard it
+        clear_session(space_id)
         return None
 
 
-def clear_session() -> None:
-    """Clear the saved session state."""
+def clear_session(space_id: str) -> None:
+    """Clear the saved session state for a specific workspace."""
     try:
-        if SESSION_FILE.exists():
-            SESSION_FILE.unlink()
+        session_path = _session_file(space_id)
+        if session_path.exists():
+            session_path.unlink()
             logging.getLogger(__name__).info("Session cleared")
     except OSError:
         pass

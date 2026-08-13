@@ -87,7 +87,7 @@ class NotionClient:
                     return None
 
                 logger.debug("Export task triggered successfully with task ID: %s", task_id)
-                save_session(task_id, export_started_at_ms)
+                save_session(self.settings.notion_space_id, task_id, export_started_at_ms)
 
             # Phase 2: Poll for task completion (returns True on success)
             task_succeeded = await self._poll_task_completion(task_id)
@@ -232,7 +232,8 @@ class NotionClient:
     async def _poll_once(self, task_data: dict[str, Any]) -> bool | None:
         """Poll Notion for task status once.
 
-        Returns:
+        Returns
+        -------
             True  – task completed successfully.
             False – task failed (stop polling).
             None  – task still in progress (continue polling).
@@ -417,7 +418,12 @@ class NotionClient:
 
                             if downloaded % (10 * 1024 * 1024) == 0 and total_size > 0:
                                 progress = (downloaded / total_size) * 100
-                                logger.debug("Download progress: %.1f%% (%d/%d bytes)", progress, downloaded, total_size)
+                                logger.debug(
+                                    "Download progress: %.1f%% (%d/%d bytes)",
+                                    progress,
+                                    downloaded,
+                                    total_size,
+                                )
 
                 file_size = file_path.stat().st_size
                 logger.info("Download completed: %s (%d bytes)", filename, file_size)
@@ -425,7 +431,7 @@ class NotionClient:
 
             except requests.HTTPError as e:
                 if attempt < max_retries - 1 and e.response is not None and e.response.status_code >= 500:
-                    delay = min(base_delay * (2 ** attempt), max_delay)
+                    delay = min(base_delay * (2**attempt), max_delay)
                     logger.warning(
                         "Download failed with HTTP %d (attempt %d/%d), retrying in %ds",
                         e.response.status_code,

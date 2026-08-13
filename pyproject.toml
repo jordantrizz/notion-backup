@@ -6,6 +6,7 @@ show-fixes = true
 [tool.ruff.lint]
 select = [ "ALL"]
 ignore = [
+    "CPY001",
     "D401",
     "ANN401",
     "S603",
@@ -31,6 +32,9 @@ ignore = [
     "PLR2004",
     "RUF001"
 ]
+# Standard pytest patterns that conflict with ruff's ALL rule set
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "ANN"]
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
