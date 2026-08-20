@@ -4,6 +4,7 @@ Notion Backup - Modular Version
 Automatically backup your Notion workspace with pluggable storage and notification backends.
 """
 
+import asyncio
 import logging
 import sys
 
@@ -12,6 +13,7 @@ from pydantic import ValidationError
 
 from src.config import Settings
 from src.core import cleanup_backups_sync, list_backups_sync, run_backup_sync
+from src.core.client import NotionClient
 from src.utils import format_file_size
 
 
@@ -165,8 +167,16 @@ def test(_: click.Context) -> None:
     click.echo("🔧 Testing configuration...")
     click.echo(f"📦 Storage Backend: {settings.storage_backend.value}")
 
-    # Test would be implemented here
-    click.echo("✅ Configuration test passed!")
+    # Verify Notion credentials without triggering an export
+    click.echo("🔑 Verifying Notion credentials...")
+    client = NotionClient(settings)
+    result = asyncio.run(client.test_connection())
+
+    if result.success:
+        click.echo(f"✅ {result.message}")
+    else:
+        click.echo(f"❌ {result.message}", err=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

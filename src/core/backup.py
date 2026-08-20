@@ -429,6 +429,17 @@ Created in dry-run mode at {timestamp}.
         else:
             logger.info("Testing connections...")
 
+        # Verify Notion credentials first so we fail fast before any
+        # export/recovery work begins.
+        if not dry_run:
+            notion_test = await self.notion_client.test_connection()
+            if notion_test.success:
+                logger.info("✓ Notion credentials: %s", notion_test.message)
+            else:
+                logger.error("✗ Notion credentials failed: %s", notion_test.message)
+                msg = f"Notion credentials failed: {notion_test.message}"
+                raise ConnectionError(msg)
+
         # Test storage connection
         storage_test = await self.storage.test_connection()
         if storage_test.success:

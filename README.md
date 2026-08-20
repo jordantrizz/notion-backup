@@ -99,6 +99,19 @@ python main.py list
 python main.py cleanup --keep 5
 ```
 
+### 6. Verify Credentials
+
+Before running a backup, the tool verifies your Notion credentials (token, file token, and space ID) via a lightweight API call — no export is triggered. This check runs automatically as part of the backup pre-flight, so invalid credentials fail fast before any export or recovery work begins.
+
+You can also run the check on its own:
+
+```bash
+# Verify Notion credentials without triggering an export
+python main.py test
+```
+
+If the credentials are invalid, the command exits with a non-zero status and a clear error message.
+
 ## 🐳 Docker
 
 This project is fully containerized, allowing you to run the backup tool in a consistent and isolated environment.

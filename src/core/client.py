@@ -5,6 +5,7 @@ import json
 import logging
 import time
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,14 @@ from src.utils.redis_client import RedisClient
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class ConnectionResult:
+    """Result of a Notion credential/connection check."""
+
+    success: bool
+    message: str
+
+
 # noinspection PyBroadException
 class NotionClient:
     """Client for interacting with Notion's export API."""
@@ -25,6 +34,7 @@ class NotionClient:
     API_VERSION = "v3"
     ENQUEUE_ENDPOINT = f"{BASE_URL}/{API_VERSION}/enqueueTask"
     GET_TASKS_ENDPOINT = f"{BASE_URL}/{API_VERSION}/getTasks"
+    GET_SPACES_ENDPOINT = f"{BASE_URL}/{API_VERSION}/getSpaces"
     NOTIFICATION_ENDPOINT = f"{BASE_URL}/{API_VERSION}/getNotificationLogV2"
     MARK_READ_ENDPOINT = f"{BASE_URL}/{API_VERSION}/saveTransactionsMain"
     CONTENT_TYPE = "application/json"
@@ -50,6 +60,50 @@ class NotionClient:
         )
 
         logger.info("Notion client initialized")
+
+    async def test_connection(self) -> ConnectionResult:
+        """Verify Notion credentials without triggering an export.
+
+        Calls the lightweight ``getSpaces`` endpoint to confirm the
+        ``token_v2`` cookie and ``space_id`` are valid. This runs before any
+        export/recovery work so invalid credentials fail fast.
+
+        Returns
+        -------
+            ConnectionResult indicating whether the credentials are valid.
+        """
+        try:
+            response = self.session.post(
+                self.GET_SPACES_ENDPOINT,
+                json={},
+                timeout=30,
+            )
+
+            if response.status_code == 401:
+                msg = "Notion token invalid or expired (HTTP 401)"
+                logger.error(msg)
+                return ConnectionResult(success=False, message=msg)
+
+            if response.status_code != 200:
+                msg = f"Notion API returned HTTP {response.status_code}"
+                logger.error(msg)
+                return ConnectionResult(success=False, message=msg)
+
+            data = response.json()
+            spaces = data.get("space", {})
+            if self.settings.notion_space_id not in spaces:
+                msg = f"Notion space '{self.settings.notion_space_id}' not found for this token"
+                logger.error(msg)
+                return ConnectionResult(success=False, message=msg)
+
+            msg = f"Notion credentials valid for space '{self.settings.notion_space_id}'"
+            logger.info(msg)
+            return ConnectionResult(success=True, message=msg)
+
+        except Exception as e:
+            msg = f"Failed to verify Notion credentials: {e}"
+            logger.exception(msg)
+            return ConnectionResult(success=False, message=msg)
 
     @retry_async(max_retries=3, delay=5.0)
     async def export_workspace(
