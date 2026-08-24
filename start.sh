@@ -37,6 +37,7 @@ setup_env() {
     fi
     "${VENV_DIR}/bin/python" -m pip install --upgrade pip >&2
     "${VENV_DIR}/bin/python" -m pip install -r requirements.txt >&2
+    source "${VENV_DIR}/bin/activate"
 }
 
 case "${1:-}" in
@@ -45,9 +46,7 @@ case "${1:-}" in
         ;;
     env)
         setup_env
-        echo "Virtual environment ready at ${VENV_DIR}" >&2
-        echo "Run 'eval \"\$(./start.sh env)\"' to activate it in your current shell." >&2
-        echo "source '${VENV_DIR}/bin/activate'"
+        echo "Virtual environment ready and activated at ${VENV_DIR}" >&2
         ;;
     *)
         setup_env
